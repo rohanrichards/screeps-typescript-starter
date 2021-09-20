@@ -36,7 +36,6 @@ export const utility = {
         }
     },
     run: (creep: Creep) => {
-        creep.say(`${creep.memory.icon}➡${CREEP_JOB_ICONS[creep.memory.job]}`)
         // first we determine what mode the creep is in
         if (creep.store.getUsedCapacity() === 0) {
             // set mode to harvest
@@ -107,14 +106,15 @@ export const utility = {
                 if (!source) {
                     [source] = creep.room.find(FIND_RUINS, { filter: (source) => source.id === creep.memory.target })
                 }
-                if (creep.withdraw(source, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
+                const withdrawCode = creep.withdraw(source, RESOURCE_ENERGY)
+                if (withdrawCode === ERR_NOT_IN_RANGE) {
                     creep.moveTo(source, MOVE_CONFIG)
                 }
-                if (creep.withdraw(source, RESOURCE_ENERGY) === ERR_NOT_ENOUGH_RESOURCES) {
+                if (withdrawCode === ERR_NOT_ENOUGH_RESOURCES) {
                     creep.memory.target = undefined
                     creep.memory.job = CREEP_JOBS.THINK
                 }
-                if (creep.withdraw(source, RESOURCE_ENERGY) === ERR_INVALID_TARGET) {
+                if (withdrawCode === ERR_INVALID_TARGET) {
                     creep.memory.target = undefined
                     creep.memory.job = CREEP_JOBS.THINK
                 }

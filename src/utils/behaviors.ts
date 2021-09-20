@@ -18,8 +18,17 @@ export const findEnergyResource = (creep: Creep) => {
         })
         return sourceWithSpace
     } else {
-        return null
+        return undefined
     }
+}
+
+export const checkIfSpawnNeedsEnergy = () => {
+    const [freeRoom] = _.filter(Game.structures, (structure: AnyStoreStructure) => {
+        return (structure.structureType === STRUCTURE_EXTENSION ||
+            structure.structureType === STRUCTURE_SPAWN) &&
+            structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0
+    })
+    return freeRoom ? true : false
 }
 
 const countEmptyTilesAroundSource = (source: Source) => {
@@ -44,6 +53,18 @@ export const findScavengeSource = (creep: Creep) => {
 
     const [ruin] = creep.room.find(FIND_RUINS, {
         filter: (ruin) => { return ruin.store.getUsedCapacity(RESOURCE_ENERGY) ?? 0 > 0 }
+    })
+    return ruin
+}
+
+export const findScavengeSourceFromId = (creep: Creep, id: String) => {
+    let [tomb] = creep.room.find(FIND_TOMBSTONES, {
+        filter: (tomb) => { return tomb.id === id }
+    })
+    if (tomb) return tomb
+
+    const [ruin] = creep.room.find(FIND_RUINS, {
+        filter: (ruin) => { return ruin.id === id }
     })
     return ruin
 }

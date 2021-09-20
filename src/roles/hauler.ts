@@ -1,3 +1,10 @@
+import { getStoredEnergy } from "jobs/getStoredEnergy"
+import { moveToParkingFlag } from "jobs/moveToParkingFlag"
+import { scavengeEnergy } from "jobs/scavengeEnergy"
+import { storeEnergy } from "jobs/storeEnergy"
+import { storeEnergyInSpawn } from "jobs/storeEnergyInSpawn"
+import { ROLES } from "roles"
+import { checkIfSpawnNeedsEnergy } from "utils/behaviors"
 import { CREEP_JOBS, CREEP_JOB_ICONS, CREEP_STATES } from "utils/constants"
 
 const MOVE_CONFIG: MoveToOpts = {
@@ -5,115 +12,71 @@ const MOVE_CONFIG: MoveToOpts = {
     visualizePathStyle: { stroke: '#c3eb34' }
 }
 
-export const hauler = {
-    getConfig: (): CreepConfig => {
-        const role = "HAULER"
-        const version = 3
-        const id = Math.random().toString(36).substr(2, 6)
-        const name = `${role}_${version}_${id}`
-        const parts = [WORK, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE]
-        return {
-            parts,
-            name,
-            options: {
-                memory: {
-                    role,
-                    icon: '🚚',
-                    state: CREEP_STATES.IDLE,
-                    job: CREEP_JOBS.IDLE
-                },
-            }
-        }
-    },
-    run: (creep: Creep) => {
-        creep.say(`${creep.memory.icon}: ${CREEP_JOB_ICONS[creep.memory.job]}`)
+export const haulerRole = (creep: Creep) => {
+    const state = creep.memory.state
 
-        if (creep.store.getUsedCapacity() === 0) {
-            // set mode to fill up storage
-            creep.memory.state = CREEP_STATES.FILL
-        } else if (creep.store.getFreeCapacity() === 0) {
-            // creep is full so it can stop collecting now
-            creep.memory.state = CREEP_STATES.EMPTY
-            creep.memory.target = undefined
-        }
+    if (creep.store.getUsedCapacity() === 0) {
+        // creep is empty
+        creep.memory.state = CREEP_STATES.FILL
+    } else if (creep.store.getFreeCapacity() === 0) {
+        // creep is full
+        creep.memory.state = CREEP_STATES.EMPTY
+        creep.memory.target = undefined
+    }
 
-        if (creep.memory.state === CREEP_STATES.FILL) {
-            // look for any dropped resources
-            let [source] = creep.room.find(FIND_DROPPED_RESOURCES)
-            if (source) {
-                creep.memory.job = CREEP_JOBS.PICKUP
-                if (creep.pickup(source) === ERR_NOT_IN_RANGE) {
-                    creep.moveTo(source, MOVE_CONFIG)
-                }
-            } else {
-                // check if extension or spawn have room
-                const [freeRoom] = _.filter(Game.structures, (structure: AnyStoreStructure) => {
-                    return (structure.structureType === STRUCTURE_EXTENSION ||
-                        structure.structureType === STRUCTURE_SPAWN) &&
-                        structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0
-                })
-                if (freeRoom) {
-                    // now check if we have any spare energy in storage
-                    const [storage] = creep.room.find(FIND_STRUCTURES, {
-                        filter: (struct) => {
-                            return (struct.structureType === STRUCTURE_STORAGE ||
-                                struct.structureType === STRUCTURE_CONTAINER) &&
-                                struct.store.getUsedCapacity(RESOURCE_ENERGY) > 0
+    switch (state) {
+        case CREEP_STATES.FILL:
+            // attempt to collect energy
+            try {
+                scavengeEnergy(creep)
+            } catch (code) {
+                creep.memory.target = undefined
+                if (code === ERR_NOT_FOUND) {
+                    // found nothing on the ground/ruins/tombs
+                    if (checkIfSpawnNeedsEnergy()) {
+                        // check if the spawner or extensions needs any energy and if so fill up from storage
+                        try {
+                            getStoredEnergy(creep)
+                        } catch (code) {
+                            // nothing to fill up on, empty what we have
+                            creep.memory.target = undefined
+                            creep.memory.state = CREEP_STATES.EMPTY
                         }
-                    })
-                    if (storage) {
-                        creep.memory.job = CREEP_JOBS.TRANSFER
-                        if (creep.pickup(source) === ERR_NOT_IN_RANGE) {
-                            creep.moveTo(source, MOVE_CONFIG)
-                        }
-                    } else {
-                        // nothing more to pick up
-                        creep.memory.state = CREEP_STATES.EMPTY
                     }
                 } else {
-                    // nothing more to pick up
+                    // some other error while scavenging
+                    creep.memory.target = undefined
                     creep.memory.state = CREEP_STATES.EMPTY
                 }
             }
-        } else if (creep.memory.state === CREEP_STATES.EMPTY) {
-            // prioritize spawner and extensions first
-            let [storage] = _.filter(Game.structures, (structure: AnyStoreStructure) => {
-                return (structure.structureType === STRUCTURE_EXTENSION ||
-                    structure.structureType === STRUCTURE_SPAWN ||
-                    structure.structureType === STRUCTURE_TOWER) &&
-                    structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0
-            })
-
-            // if they're full stick it in storage
-            if (!storage) {
-                [storage] = creep.room.find(FIND_STRUCTURES, {
-                    filter: (struct) => {
-                        return (struct.structureType === STRUCTURE_STORAGE ||
-                            struct.structureType === STRUCTURE_CONTAINER) &&
-                            struct.store.getFreeCapacity(RESOURCE_ENERGY) > 0
+            break
+        case CREEP_STATES.EMPTY:
+            // put the energy somewhere
+            try {
+                // try to store it in a spawner/extension first
+                storeEnergyInSpawn(creep)
+            } catch (code) {
+                if (code === ERR_NOT_FOUND) {
+                    // spawners dont need any so just store it in containers/storage
+                    try {
+                        storeEnergy(creep)
+                    } catch (e) {
+                        // nowhere to store what we're holding, just idle
+                        creep.memory.target = undefined
+                        creep.memory.state = CREEP_STATES.IDLE
                     }
-                })
-            }
-            if (storage) {
-                creep.memory.job = CREEP_JOBS.STORE
-                if (creep.transfer(storage, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-                    creep.moveTo(storage, MOVE_CONFIG);
-                }
-            } else {
-                // nowhere to put stuff
-                creep.memory.job = CREEP_JOBS.UPGRADE
-                if (creep.upgradeController(creep.room.controller!) == ERR_NOT_IN_RANGE) {
-                    creep.moveTo(creep.room.controller!, MOVE_CONFIG);
+                } else {
+                    // something unexpected went wrong
+                    creep.memory.target = undefined
+                    creep.memory.state = CREEP_STATES.IDLE
                 }
             }
-        } else if (creep.memory.state === CREEP_STATES.IDLE) {
-            // move to the idle flag
-            const [flag] = creep.room.find(FIND_FLAGS, {
-                filter: (flag) => flag.name === 'Parking'
-            })
-            creep.moveTo(flag)
-            creep.memory.job = CREEP_JOBS.IDLE
+            break
+        case CREEP_STATES.IDLE:
+            moveToParkingFlag(creep)
+            // always reset after each idle tick incase something has changed and they can now fill or empty
+            creep.memory.target = undefined
             creep.memory.state = CREEP_STATES.EMPTY
-        }
+            break
     }
 }

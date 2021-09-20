@@ -1,3 +1,8 @@
+import { buildConstruction } from "jobs/buildConstruction"
+import { getStoredEnergy } from "jobs/getStoredEnergy"
+import { moveToParkingFlag } from "jobs/moveToParkingFlag"
+import { repairStructures } from "jobs/repairStructures"
+import { ROLES } from "roles"
 import { CREEP_JOBS, CREEP_JOB_ICONS, CREEP_STATES } from "utils/constants"
 
 const MOVE_CONFIG: MoveToOpts = {
@@ -5,90 +10,59 @@ const MOVE_CONFIG: MoveToOpts = {
     visualizePathStyle: { stroke: '#ae34eb' }
 }
 
-export const builder = {
-    getConfig: (): CreepConfig => {
-        const role = "BUILDER"
-        const version = 3
-        const id = Math.random().toString(36).substr(2, 6)
-        const name = `${role}_${version}_${id}`
-        const parts = [WORK, WORK, WORK, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE]
-        return {
-            parts,
-            name,
-            options: {
-                memory: {
-                    role,
-                    icon: '🏗',
-                    state: CREEP_STATES.IDLE,
-                    job: CREEP_JOBS.THINK
-                }
-            }
-        }
-    },
-    run: (creep: Creep) => {
-        creep.say(`${creep.memory.icon}: ${CREEP_JOB_ICONS[creep.memory.job]}`)
+export const builderRole = (creep: Creep) => {
+    const state = creep.memory.state
 
-        if (creep.store.getUsedCapacity() === 0) {
-            // set mode to fill up storage
-            creep.memory.state = CREEP_STATES.FILL
-        } else if (creep.store.getFreeCapacity() === 0) {
-            // creep is full so it can stop collecting now
-            creep.memory.state = CREEP_STATES.EMPTY
-        }
+    if (creep.store.getUsedCapacity() === 0) {
+        // creep is empty
+        creep.memory.state = CREEP_STATES.FILL
+    } else if (creep.store.getFreeCapacity() === 0) {
+        // creep is full
+        creep.memory.state = CREEP_STATES.EMPTY
+        creep.memory.target = undefined
+    }
 
-        if (creep.memory.state === CREEP_STATES.FILL) {
-            const [source] = creep.room.find(FIND_STRUCTURES, {
-                filter: (struct) => {
-                    return (struct.structureType === STRUCTURE_STORAGE ||
-                        struct.structureType === STRUCTURE_CONTAINER) &&
-                        struct.store.getUsedCapacity(RESOURCE_ENERGY) > 0
-                }
-            })
-            if (source) {
-                creep.memory.job = CREEP_JOBS.PICKUP
-                if (creep.withdraw(source, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
-                    creep.moveTo(source, MOVE_CONFIG)
-                }
-            } else {
-                // nothing to pick up currently so go idle
-                creep.memory.job = CREEP_JOBS.IDLE
+    switch (state) {
+        case CREEP_STATES.FILL:
+            // attempt to collect energy
+            try {
+                getStoredEnergy(creep)
+            } catch (code) {
+                // nowhere to collect energy
+                creep.memory.target = undefined
                 creep.memory.state = CREEP_STATES.IDLE
             }
-        }
-        else if (creep.memory.state === CREEP_STATES.EMPTY) {
-            // in build mode
-            const [target] = creep.room.find(FIND_MY_CONSTRUCTION_SITES)
-            if (target) {
-                creep.memory.job = CREEP_JOBS.BUILD
-                if (creep.build(target) == ERR_NOT_IN_RANGE) {
-                    creep.moveTo(target, MOVE_CONFIG);
-                }
-            } else {
-                // no build targets, check for repairs
-                const [target] = creep.room.find(FIND_STRUCTURES, {
-                    filter: (structure) => {
-                        // ignoring walls for now, too much HP to try to repair
-                        return structure.hits < structure.hitsMax && (structure.structureType !== STRUCTURE_WALL)
+            break
+        case CREEP_STATES.EMPTY:
+            // look for things to build
+            try {
+                buildConstruction(creep)
+            } catch (code) {
+                if (code === ERR_NOT_FOUND) {
+                    // found nothing to build check for repairable targets
+                    try {
+                        console.log('nothing to build, attempting to repair')
+                        return repairStructures(creep)
+                    } catch (code) {
+                        console.log('failed to repair: ', code)
+                        throw code
                     }
-                })
-                creep.memory.job = CREEP_JOBS.REPAIR
-                if (creep.repair(target) == ERR_NOT_IN_RANGE) {
-                    creep.moveTo(target, MOVE_CONFIG);
-                }
-                if (!target) {
-                    // nothing to repair go into an idle state
+                } if (code === ERR_NOT_ENOUGH_RESOURCES) {
+                    creep.memory.state = CREEP_STATES.FILL
+                    creep.memory.target = undefined
+                } else {
+                    // something unexpected went wrong while building
+                    console.log('unexpected error while building: ', code)
                     creep.memory.state = CREEP_STATES.IDLE
-                    creep.memory.job = CREEP_JOBS.IDLE
+                    creep.memory.target = undefined
                 }
             }
-        } else if (creep.memory.state === CREEP_STATES.IDLE) {
-            // move to the idle flag
-            const [flag] = creep.room.find(FIND_FLAGS, {
-                filter: (flag) => flag.name === 'Parking'
-            })
-            creep.moveTo(flag)
-            creep.memory.job = CREEP_JOBS.IDLE
+            break
+        case CREEP_STATES.IDLE:
+            moveToParkingFlag(creep)
+            // always reset after each idle tick incase something has changed and they can now fill or empty
+            creep.memory.target = undefined
             creep.memory.state = CREEP_STATES.EMPTY
-        }
+            break
     }
 }
