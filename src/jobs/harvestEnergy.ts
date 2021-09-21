@@ -2,13 +2,12 @@ import { findEnergyResource } from "utils/behaviors"
 import { CREEP_JOBS } from "utils/constants"
 
 const MOVE_CONFIG: MoveToOpts = {
-    reusePath: 8,
-    visualizePathStyle: { stroke: '#ebc334' }
+    visualizePathStyle: { stroke: '#1ce633', strokeWidth: 0.05, opacity: 0.5, lineStyle: "dotted" }
 }
 
 export const harvestEnergy = (creep: Creep) => {
     const target = creep.memory.target
-    let source: Source
+    let source: Source | null
 
     if (!target) {
         // no target, find a new one
@@ -16,7 +15,7 @@ export const harvestEnergy = (creep: Creep) => {
         creep.memory.target = source?.id
     } else {
         // have a target so look up the related source
-        [source] = creep.room.find(FIND_SOURCES, { filter: (source) => source.id === target })
+        source = Game.getObjectById(target as Id<Source>)
     }
 
     if (source) {

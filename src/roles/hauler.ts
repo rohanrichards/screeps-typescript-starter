@@ -7,11 +7,6 @@ import { ROLES } from "roles"
 import { checkIfSpawnNeedsEnergy } from "utils/behaviors"
 import { CREEP_JOBS, CREEP_JOB_ICONS, CREEP_STATES } from "utils/constants"
 
-const MOVE_CONFIG: MoveToOpts = {
-    reusePath: 8,
-    visualizePathStyle: { stroke: '#c3eb34' }
-}
-
 export const haulerRole = (creep: Creep) => {
     const state = creep.memory.state
 
@@ -30,21 +25,23 @@ export const haulerRole = (creep: Creep) => {
             try {
                 scavengeEnergy(creep)
             } catch (code) {
+                console.log('hauler failed while scavenging: ', code)
                 creep.memory.target = undefined
                 if (code === ERR_NOT_FOUND) {
-                    // found nothing on the ground/ruins/tombs
                     if (checkIfSpawnNeedsEnergy()) {
+                        // found nothing on the ground/ruins/tombs
                         // check if the spawner or extensions needs any energy and if so fill up from storage
                         try {
-                            getStoredEnergy(creep)
+                            scavengeEnergy(creep)
                         } catch (code) {
+                            getStoredEnergy(creep)
                             // nothing to fill up on, empty what we have
-                            creep.memory.target = undefined
-                            creep.memory.state = CREEP_STATES.EMPTY
+                            throw code
                         }
                     }
                 } else {
                     // some other error while scavenging
+                    console.log('unhandled hauler creep error: ', code)
                     creep.memory.target = undefined
                     creep.memory.state = CREEP_STATES.EMPTY
                 }
@@ -58,13 +55,16 @@ export const haulerRole = (creep: Creep) => {
             } catch (code) {
                 if (code === ERR_NOT_FOUND) {
                     // spawners dont need any so just store it in containers/storage
+                    creep.memory.target = undefined
                     try {
                         storeEnergy(creep)
-                    } catch (e) {
-                        // nowhere to store what we're holding, just idle
-                        creep.memory.target = undefined
-                        creep.memory.state = CREEP_STATES.IDLE
+                    } catch (code) {
+                        throw code
                     }
+                } else if (code === ERR_NOT_ENOUGH_RESOURCES) {
+                    // hauler is empty
+                    creep.memory.target = undefined
+                    creep.memory.state = CREEP_STATES.FILL
                 } else {
                     // something unexpected went wrong
                     creep.memory.target = undefined

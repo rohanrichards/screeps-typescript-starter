@@ -1,11 +1,10 @@
 const MOVE_CONFIG: MoveToOpts = {
-    reusePath: 8,
-    visualizePathStyle: { stroke: '#ebc334' }
+    visualizePathStyle: { stroke: '#ede3b2', strokeWidth: 0.03, opacity: 0.3, lineStyle: "solid" }
 }
 
 export const getStoredEnergy = (creep: Creep) => {
     const target = creep.memory.target
-    let storage: StructureStorage | StructureContainer
+    let storage: Structure | null
     if (!target) {
         // no storage target yet so find storage
         [storage] = creep.room.find(FIND_STRUCTURES, {
@@ -19,25 +18,17 @@ export const getStoredEnergy = (creep: Creep) => {
             creep.memory.target = storage?.id
         }
     } else {
-        [storage] = creep.room.find(FIND_STRUCTURES, { filter: (source) => source.id === target })
+        storage = Game.getObjectById(target as Id<Structure>)
     }
     if (storage) {
         const result = creep.withdraw(storage, RESOURCE_ENERGY)
 
         if (result === ERR_NOT_IN_RANGE) {
             creep.moveTo(storage, MOVE_CONFIG)
+        } else if (result !== OK) {
+            throw result
         }
-        if (result === ERR_NOT_ENOUGH_RESOURCES) {
-            // storage is empty look for more
-            creep.memory.target = undefined
-        }
-        if (result === ERR_FULL) {
-            // creep is now full
-            creep.memory.target = undefined
-        }
-        if (result === ERR_NOT_FOUND || result === ERR_INVALID_TARGET) {
-            // storage is gone or wrong
-            creep.memory.target = undefined
-        }
+    } else {
+        throw ERR_NOT_FOUND
     }
 }

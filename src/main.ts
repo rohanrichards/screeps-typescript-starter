@@ -1,8 +1,6 @@
-import { utility } from "roles/utility";
 import { CREEP_STATES } from "utils/constants";
 import { ErrorMapper } from "utils/ErrorMapper";
 import { ui } from "utils/ui";
-import { JOBS } from "jobs";
 import { ROLES, roles } from "roles";
 import { creepConfigs } from "utils/creepConfigs";
 
@@ -13,11 +11,9 @@ declare global {
 	}
 
 	interface CreepMemory {
-		role: string
+		role: ROLES
 		state: CREEP_STATES
 		job: string
-		job2?: JOBS
-		role2?: ROLES
 		target?: string
 		icon: string
 	}
@@ -36,54 +32,45 @@ declare global {
 	}
 }
 
+const RoleCounts = new Map([
+	[ROLES.UTILITY, 1],
+	[ROLES.HARVESTER, 3],
+	[ROLES.HAULER, 2],
+	[ROLES.BUILDER, 2],
+	[ROLES.UPGRADER, 3],
+])
+
 // When compiling TS to JS and bundling with rollup, the line numbers and file names in error messages change
 // This utility uses source maps to get the line numbers and file names of the original, TS source code
 export const loop = ErrorMapper.wrapLoop(() => {
-	const haulerCreeps = _.filter(Game.creeps, (creep) => creep.memory.role === 'HAULER')
-	if (haulerCreeps.length < 1) {
-		const config = creepConfigs.HAULER()
-		Game.spawns['Spawn1'].spawnCreep(config.parts, config.name, config.options)
-	}
+	const creepMap: Map<ROLES, number> = new Map()
 
-	const utilityCreeps = _.filter(Game.creeps, (creep) => creep.memory.role === 'UTILITY')
-	if (utilityCreeps.length < 0) {
-		const config = utility.getConfig()
-		Game.spawns['Spawn1'].spawnCreep(config.parts, config.name, config.options)
-	}
-
-	const harvesterCreeps = _.filter(Game.creeps, (creep) => creep.memory.role === 'HARVESTER')
-	if (harvesterCreeps.length < 4) {
-		const config = creepConfigs.HARVESTER()
-		Game.spawns['Spawn1'].spawnCreep(config.parts, config.name, config.options)
-	}
-
-	const builderCreeps = _.filter(Game.creeps, (creep) => creep.memory.role === 'BUILDER')
-	if (builderCreeps.length < 4) {
-		const config = creepConfigs.BUILDER()
-		Game.spawns['Spawn1'].spawnCreep(config.parts, config.name, config.options)
-	}
-
-	const upgraderCreeps = _.filter(Game.creeps, (creep) => creep.memory.role === 'UPGRADER')
-	if (upgraderCreeps.length < 2) {
-		const config = creepConfigs.UPGRADER()
-		Game.spawns['Spawn1'].spawnCreep(config.parts, config.name, config.options)
-	}
-
-
-
-	utilityCreeps.forEach(creep => {
-		utility.run(creep)
-	})
+	// loop through all creeps
 	_.forEach(Game.creeps, (creep) => {
+		// figure out how many of each creep we have
+		let count = creepMap.get(creep.memory.role) ?? 0
+		creepMap.set(creep.memory.role, ++count)
+
+		// call their control methods
 		try {
-			roles[creep.memory.role2 as ROLES](creep)
+			roles[creep.memory.role as ROLES](creep)
 			creep.say(`${creep.memory.icon}`)
 		} catch (e) {
+			console.log('uncaught error in main.ts: ', e)
 			// shh
 		}
 	})
 
-	ui.run('E25S39')
+	// check if there are less than we want and spawn them if needed
+	RoleCounts.forEach((roleCount, key) => {
+		const count = creepMap.get(key) ?? 0
+		if (count < roleCount) {
+			const config = creepConfigs[key]()
+			Game.spawns['Spawn1'].spawnCreep(config.parts, config.name, config.options)
+		}
+	})
+
+	// ui.run('E25S39')
 
 	cleanupMemory()
 });

@@ -1,6 +1,5 @@
 const MOVE_CONFIG: MoveToOpts = {
-    reusePath: 8,
-    visualizePathStyle: { stroke: '#ebc334' }
+    visualizePathStyle: { stroke: '#edd351', strokeWidth: 0.1, opacity: 0.5, lineStyle: "dashed" }
 }
 
 export const storeEnergyInSpawn = (creep: Creep) => {
@@ -19,7 +18,7 @@ export const storeEnergyInSpawn = (creep: Creep) => {
             creep.memory.target = storage?.id
         }
     } else {
-        [storage] = creep.room.find(FIND_STRUCTURES, { filter: (source) => source.id === target })
+        storage = Game.getObjectById(target as Id<StructureSpawn>) as StructureSpawn
     }
 
     if (storage) {

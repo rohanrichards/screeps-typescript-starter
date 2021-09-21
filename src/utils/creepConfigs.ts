@@ -2,19 +2,18 @@ import { ROLES } from "roles"
 import { CREEP_JOBS, CREEP_STATES } from "./constants"
 
 export const creepConfigs = {
-    HARVESTER: () => {
+    [ROLES.HARVESTER]: () => {
         const role = "HARVESTER"
-        const version = 1
+        const version = 2
         const id = Math.random().toString(36).substr(2, 6)
         const name = `${role}_${version}_${id}`
-        const parts = [WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE]
+        const parts = [WORK, WORK, WORK, WORK, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE] //800
         return {
             parts,
             name,
             options: {
                 memory: {
-                    role,
-                    role2: ROLES.HARVESTER,
+                    role: ROLES.HARVESTER,
                     icon: '🚜',
                     state: CREEP_STATES.FILL,
                     job: CREEP_JOBS.IDLE,
@@ -22,39 +21,37 @@ export const creepConfigs = {
             }
         }
     },
-    BUILDER: () => {
+    [ROLES.BUILDER]: () => {
         const role = "BUILDER"
-        const version = 1
+        const version = 2
         const id = Math.random().toString(36).substr(2, 6)
         const name = `${role}_${version}_${id}`
-        const parts = [WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE]
+        const parts = [WORK, WORK, WORK, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE] //800
         return {
             parts,
             name,
             options: {
                 memory: {
-                    role,
-                    role2: ROLES.BUILDER,
-                    icon: '🏗',
+                    role: ROLES.BUILDER,
+                    icon: '👷‍♂️',
                     state: CREEP_STATES.FILL,
                     job: CREEP_JOBS.THINK,
                 }
             }
         }
     },
-    HAULER: () => {
+    [ROLES.HAULER]: () => {
         const role = "HAULER"
-        const version = 1
+        const version = 2
         const id = Math.random().toString(36).substr(2, 6)
         const name = `${role}_${version}_${id}`
-        const parts = [WORK, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE, MOVE]
+        const parts = [WORK, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE, MOVE] //800
         return {
             parts,
             name,
             options: {
                 memory: {
-                    role,
-                    role2: ROLES.HAULER,
+                    role: ROLES.HAULER,
                     icon: '🚚',
                     state: CREEP_STATES.FILL,
                     job: CREEP_JOBS.IDLE,
@@ -62,20 +59,38 @@ export const creepConfigs = {
             }
         }
     },
-    UPGRADER: () => {
+    [ROLES.UPGRADER]: () => {
         const role = "UPGRADER"
-        const version = 1
+        const version = 2
         const id = Math.random().toString(36).substr(2, 6)
         const name = `${role}_${version}_${id}`
-        const parts = [WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE]
+        const parts = [WORK, WORK, WORK, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE] //800
         return {
             parts,
             name,
             options: {
                 memory: {
-                    role,
-                    role2: ROLES.UPGRADER,
-                    icon: '⚙',
+                    role: ROLES.UPGRADER,
+                    icon: '⏫',
+                    state: CREEP_STATES.FILL,
+                    job: CREEP_JOBS.THINK
+                }
+            }
+        }
+    },
+    [ROLES.UTILITY]: () => {
+        const role = "UTILITY"
+        const version = 1
+        const id = Math.random().toString(36).substr(2, 6)
+        const name = `${role}_${version}_${id}`
+        const parts = [WORK, CARRY, MOVE, MOVE] //250
+        return {
+            parts,
+            name,
+            options: {
+                memory: {
+                    role: ROLES.UTILITY,
+                    icon: '🧰',
                     state: CREEP_STATES.FILL,
                     job: CREEP_JOBS.THINK
                 }

@@ -22,6 +22,7 @@ export const upgraderRole = (creep: Creep) => {
                 getStoredEnergy(creep)
             } catch (code) {
                 // nowhere to collect energy
+                console.log('upgrader fill error: ', code)
                 creep.memory.target = undefined
                 creep.memory.state = CREEP_STATES.IDLE
             }
@@ -45,7 +46,7 @@ export const upgraderRole = (creep: Creep) => {
             moveToParkingFlag(creep)
             // always reset after each idle tick incase something has changed and they can now fill or empty
             creep.memory.target = undefined
-            creep.memory.state = CREEP_STATES.EMPTY
+            creep.memory.state = CREEP_STATES.FILL
             break
     }
 }

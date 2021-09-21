@@ -30,7 +30,13 @@ export const builderRole = (creep: Creep) => {
             } catch (code) {
                 // nowhere to collect energy
                 creep.memory.target = undefined
-                creep.memory.state = CREEP_STATES.IDLE
+                if (code === ERR_NOT_FOUND) {
+                    // found no resources
+                    creep.memory.state = CREEP_STATES.IDLE
+                } else {
+                    // unexpected error
+                    console.log('builder fill unexpected error: ', code)
+                }
             }
             break
         case CREEP_STATES.EMPTY:
@@ -39,22 +45,22 @@ export const builderRole = (creep: Creep) => {
                 buildConstruction(creep)
             } catch (code) {
                 if (code === ERR_NOT_FOUND) {
+                    creep.memory.target = undefined
                     // found nothing to build check for repairable targets
                     try {
                         console.log('nothing to build, attempting to repair')
-                        return repairStructures(creep)
+                        repairStructures(creep)
                     } catch (code) {
                         console.log('failed to repair: ', code)
+                        creep.memory.target = undefined
                         throw code
                     }
-                } if (code === ERR_NOT_ENOUGH_RESOURCES) {
+                } else if (code === ERR_NOT_ENOUGH_RESOURCES) {
                     creep.memory.state = CREEP_STATES.FILL
-                    creep.memory.target = undefined
                 } else {
                     // something unexpected went wrong while building
                     console.log('unexpected error while building: ', code)
                     creep.memory.state = CREEP_STATES.IDLE
-                    creep.memory.target = undefined
                 }
             }
             break
@@ -62,7 +68,11 @@ export const builderRole = (creep: Creep) => {
             moveToParkingFlag(creep)
             // always reset after each idle tick incase something has changed and they can now fill or empty
             creep.memory.target = undefined
-            creep.memory.state = CREEP_STATES.EMPTY
+            if (creep.store.getUsedCapacity(RESOURCE_ENERGY) > 0) {
+                creep.memory.state = CREEP_STATES.EMPTY
+            } else {
+                creep.memory.state = CREEP_STATES.FILL
+            }
             break
     }
 }
