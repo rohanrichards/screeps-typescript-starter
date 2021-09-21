@@ -13,7 +13,7 @@ export const moveToParkingFlag = (creep: Creep) => {
         // flags dont have an ID so just set the name to tarket
         creep.memory.target = flag?.name
     } else {
-        flag = Game.getObjectById(target as Id<Flag>)
+        flag = Game.flags['Parking']
     }
 
     if (flag) {

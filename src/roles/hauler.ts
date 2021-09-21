@@ -20,9 +20,13 @@ export const haulerRole = (creep: Creep) => {
     }
 
     switch (state) {
+        case CREEP_STATES.IDLE:
+            creep.memory.target = undefined
+            moveToParkingFlag(creep)
         case CREEP_STATES.FILL:
             // attempt to collect energy
             try {
+                console.log('hauler attempting to scavenge: ')
                 scavengeEnergy(creep)
             } catch (code) {
                 console.log('hauler failed while scavenging: ', code)
@@ -32,11 +36,18 @@ export const haulerRole = (creep: Creep) => {
                         // found nothing on the ground/ruins/tombs
                         // check if the spawner or extensions needs any energy and if so fill up from storage
                         try {
+                            console.log('spawn needs energy trying to scavenge')
                             scavengeEnergy(creep)
                         } catch (code) {
-                            getStoredEnergy(creep)
-                            // nothing to fill up on, empty what we have
-                            throw code
+                            console.log('failed to scavenge trying to gete from store')
+                            try {
+                                getStoredEnergy(creep)
+                                // nothing to fill up on, empty what we have
+                            } catch (code) {
+                                console.log('hauler has nothing to fill with, idling')
+                                creep.memory.target = undefined
+                                creep.memory.state = CREEP_STATES.IDLE
+                            }
                         }
                     }
                 } else {
@@ -71,12 +82,6 @@ export const haulerRole = (creep: Creep) => {
                     creep.memory.state = CREEP_STATES.IDLE
                 }
             }
-            break
-        case CREEP_STATES.IDLE:
-            moveToParkingFlag(creep)
-            // always reset after each idle tick incase something has changed and they can now fill or empty
-            creep.memory.target = undefined
-            creep.memory.state = CREEP_STATES.EMPTY
             break
     }
 }

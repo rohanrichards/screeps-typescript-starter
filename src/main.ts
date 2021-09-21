@@ -33,11 +33,11 @@ declare global {
 }
 
 const RoleCounts = new Map([
-	[ROLES.UTILITY, 1],
-	[ROLES.HARVESTER, 3],
-	[ROLES.HAULER, 2],
+	[ROLES.UPGRADER, 2],
 	[ROLES.BUILDER, 2],
-	[ROLES.UPGRADER, 3],
+	[ROLES.HAULER, 2],
+	[ROLES.HARVESTER, 3],
+	[ROLES.UTILITY, 1],
 ])
 
 // When compiling TS to JS and bundling with rollup, the line numbers and file names in error messages change
