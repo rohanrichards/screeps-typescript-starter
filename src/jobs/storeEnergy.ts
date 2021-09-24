@@ -27,16 +27,10 @@ export const storeEnergy = (creep: Creep) => {
         let result = creep.transfer(storage, RESOURCE_ENERGY)
 
         if (result === ERR_NOT_IN_RANGE) {
-            result = creep.moveTo(storage, MOVE_CONFIG)
-            if (result !== OK) {
-                console.log('error while harvester moving to storage: ', result)
-                creep.drop(RESOURCE_ENERGY)
-                throw result
-            }
-        } else if (result !== OK) {
-            throw result
+            creep.moveTo(storage, MOVE_CONFIG)
         }
+        return result
     } else {
-        throw ERR_NOT_FOUND
+        return ERR_NOT_FOUND
     }
 }

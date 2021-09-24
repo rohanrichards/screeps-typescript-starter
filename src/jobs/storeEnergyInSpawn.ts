@@ -26,10 +26,9 @@ export const storeEnergyInSpawn = (creep: Creep) => {
 
         if (result === ERR_NOT_IN_RANGE) {
             creep.moveTo(storage, MOVE_CONFIG)
-        } else if (result !== OK) {
-            throw result
         }
+        return result
     } else {
-        throw ERR_NOT_FOUND
+        return ERR_NOT_FOUND
     }
 }

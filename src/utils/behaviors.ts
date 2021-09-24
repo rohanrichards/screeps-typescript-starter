@@ -22,6 +22,10 @@ export const findEnergyResource = (creep: Creep) => {
     }
 }
 
+export const isEnergyResourceAvailable = (creep: Creep) => {
+    return findEnergyResource(creep) ? true : false
+}
+
 export const checkIfSpawnNeedsEnergy = () => {
     const [freeRoom] = _.filter(Game.structures, (structure: AnyStoreStructure) => {
         return (structure.structureType === STRUCTURE_EXTENSION ||
@@ -67,4 +71,18 @@ export const findScavengeSourceFromId = (creep: Creep, id: String) => {
         filter: (ruin) => { return ruin.id === id }
     })
     return ruin
+}
+
+export const isEnergyStorageAvailable = (creep: Creep) => {
+    const [storage] = creep.room.find(FIND_STRUCTURES, {
+        filter: (struct) => {
+            return (struct.structureType === STRUCTURE_EXTENSION ||
+                struct.structureType === STRUCTURE_SPAWN ||
+                struct.structureType === STRUCTURE_TOWER ||
+                struct.structureType === STRUCTURE_STORAGE ||
+                struct.structureType === STRUCTURE_CONTAINER) &&
+                struct.store.getFreeCapacity(RESOURCE_ENERGY) > 0
+        }
+    })
+    return storage ? true : false
 }

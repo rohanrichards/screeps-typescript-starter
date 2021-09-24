@@ -18,10 +18,6 @@ export const moveToParkingFlag = (creep: Creep) => {
 
     if (flag) {
         const result = creep.moveTo(flag, MOVE_CONFIG)
-
-        if (result !== OK) {
-            throw result
-        }
         return result
     } else {
         // no flags with this name in the creeps room

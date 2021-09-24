@@ -25,9 +25,10 @@ export const harvestEnergy = (creep: Creep) => {
         if (result === ERR_NOT_IN_RANGE) {
             creep.moveTo(source, MOVE_CONFIG)
         } else if (result !== OK) {
-            throw result
+            return result
         }
+        return OK
     } else {
-        throw ERR_NOT_FOUND
+        return ERR_NOT_FOUND
     }
 }
